@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gameflix Mobile Pro</title>
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body, html {
+            margin: 0; padding: 0;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: #000; color: #fff;
+            /* Removido overflow: hidden para permitir rolagem se o teclado subir */
+            min-height: 100%;
+        }
+
+        .hero {
+            /* Usando min-height em vez de height fixo para não quebrar em telas pequenas */
+            min-height: 100vh;
+            background: linear-gradient(to top, rgba(0,0,0,1) 15%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.8) 100%),
+                        url('https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=800&q=80'); 
+            background-size: cover; 
+            background-position: center;
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center;
+            padding: 20px;
+        }
+
+        .logo { 
+            color: #e50914; 
+            font-size: 1.8rem; 
+            font-weight: 900; 
+            position: absolute; 
+            top: 20px; 
+            left: 20px; 
+            letter-spacing: -1.5px; 
+        }
+
+        .hero-content { 
+            text-align: center; 
+            width: 100%;
+            max-width: 400px; /* Limita a largura em tablets */
+            margin-top: 60px; /* Espaço para o logo fixo */
+        }
+
+        h1 { 
+            font-size: clamp(1.8rem, 8vw, 2.5rem); /* Fonte fluida */
+            margin-bottom: 12px; 
+            font-weight: 800; 
+            line-height: 1.1; 
+        }
+
+        p { 
+            font-size: 1.1rem; 
+            color: #e6e6e6; 
+            margin-bottom: 30px; 
+            padding: 0 10px;
+        }
+
+        .email-form {
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px;
+            width: 100%;
+        }
+
+        .email-form input {
+            padding: 18px; 
+            width: 100%; 
+            border: 1px solid #444;
+            background: rgba(0, 0, 0, 0.7); 
+            color: #fff;
+            border-radius: 4px; 
+            font-size: 16px; /* Mínimo 16px para evitar zoom automático no iOS */
+            transition: 0.3s;
+            appearance: none;
+        }
+
+        .email-form input:focus { 
+            border-color: #e50914; 
+            outline: none;
+            background: rgba(40, 40, 40, 0.9);
+        }
+
+        /* Animação de Erro */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+        .shake-input { animation: shake 0.3s ease-in-out; border-color: #ffa00a !important; }
+
+        .btn-cta {
+            background-color: #e50914; 
+            color: white;
+            padding: 18px; 
+            font-size: 1.1rem; 
+            border: none;
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-weight: bold;
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            transition: background 0.2s;
+            width: 100%;
+        }
+
+        .btn-cta:active { transform: scale(0.98); background-color: #b9090b; }
+
+        .spinner {
+            display: none; 
+            width: 20px; height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%; 
+            border-top-color: #fff;
+            animation: spin 0.8s linear infinite; 
+            margin-left: 12px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        #msgErro {
+            color: #ffa00a; 
+            font-size: 0.9rem; 
+            margin-top: 15px;
+            display: none; 
+            font-weight: 600;
+            background: rgba(0,0,0,0.6);
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        /* Ajustes para telas bem pequenas (iPhone SE, etc) */
+        @media (max-height: 600px) {
+            .hero { justify-content: flex-start; padding-top: 80px; }
+            h1 { font-size: 1.5rem; }
+            p { margin-bottom: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+    <section class="hero">
+        <div class="logo">GAMEFLIX</div>
+
+        <div class="hero-content">
+            <h1>O jogo começa agora.</h1>
+            <p>Entre com seu acesso exclusivo para teste grátis.</p>
+            
+            <form class="email-form" id="loginForm" novalidate>
+                <input 
+                    type="text" 
+                    id="userLogin" 
+                    placeholder="Seu login (@testegratis...)" 
+                    required 
+                    inputmode="email" 
+                    autocapitalize="none" 
+                    spellcheck="false"
+                >
+                <button type="submit" id="btnSubmit" class="btn-cta">
+                    <span id="btnText">VAMOS LÁ</span>
+                    <div class="spinner" id="loader"></div>
+                </button>
+            </form>
+            <div id="msgErro">Login incorreto. Verifique e tente novamente.</div>
+        </div>
+    </section>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const input = document.getElementById('userLogin');
+            const loginDigitado = input.value.trim();
+            const loginCorreto = "@testegratisgameflix";
+            const btn = document.getElementById('btnSubmit');
+            const btnText = document.getElementById('btnText');
+            const loader = document.getElementById('loader');
+            const erroDisplay = document.getElementById('msgErro');
+
+            input.classList.remove('shake-input');
+            erroDisplay.style.display = "none";
+
+            if(loginDigitado === loginCorreto) {
+                btn.disabled = true;
+                btnText.innerText = "CONECTANDO";
+                loader.style.display = "inline-block";
+
+                setTimeout(() => {
+                    // Simulação de sucesso
+                    alert("Acesso autorizado!");
+                    // window.location.href = "proxima_pagina.html"; 
+                }, 1500);
+
+            } else {
+                // Feedback Tátil (Vibração)
+                if ("vibrate" in navigator) {
+                    navigator.vibrate([60, 40, 60]);
+                }
+                
+                input.classList.add('shake-input');
+                erroDisplay.style.display = "block";
+                
+                // Remove a classe de animação para poder repetir se errar de novo
+                setTimeout(() => input.classList.remove('shake-input'), 500);
+            }
+        });
+    </script>
+
+</body>
+</html>
